@@ -3,7 +3,7 @@ name: Kernel Sync & Trigger Build
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 6 * * *'  # 每天早上 6 点自动检测最新内核
+    - cron: '0 6 * * *'  # 每天早上 6 点检测最新内核
 
 env:
   KERNEL_REPO: https://github.com/ophub/flippy-openwrt-actions
@@ -28,16 +28,23 @@ jobs:
           echo "🔍 Fetching latest 6.12.x kernel info ..."
           api="https://api.github.com/repos/ophub/flippy-openwrt-actions/releases/tags/${KERNEL_TAG}"
           kernel_info=$(curl -s "$api")
-          latest_asset=$(echo "$kernel_info" | grep -Eo 'kernel_[0-9.]+_.*?\.tar.gz' | grep '6\.12' | sort -V | tail -n1)
+
+          # 列出所有 tar.gz 文件名
+          echo "$kernel_info" | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+\.tar\.gz' | sort -V > kernel_list.txt
+          echo "🧩 Found these kernel files:"
+          cat kernel_list.txt || true
+
+          latest_asset=$(grep -E '^6\.12\.' kernel_list.txt | sort -V | tail -n1)
           if [ -z "$latest_asset" ]; then
-            echo "❌ No 6.12.x kernel found!"
+            echo "❌ No 6.12.x kernel found under tag ${KERNEL_TAG}!"
             exit 1
           fi
-          kernel_version=$(echo "$latest_asset" | sed -E 's/^kernel_([0-9.]+)_.*$/\1/')
-          echo "✅ Found latest kernel: $kernel_version"
+
+          kernel_version=$(echo "$latest_asset" | sed 's/.tar.gz//')
+          echo "✅ Latest kernel found: $kernel_version"
           echo "kernel_version=$kernel_version" >> $GITHUB_OUTPUT
 
-      - name: Save kernel version to file
+      - name: Save kernel version
         run: |
           echo "${{ steps.kernel.outputs.kernel_version }}" > latest-kernel.txt
           git config user.name "github-actions[bot]"
