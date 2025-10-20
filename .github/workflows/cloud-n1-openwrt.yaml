@@ -10,6 +10,12 @@ on:
       - 'config.sh'
   schedule:
     - cron: 0 8 * * 0   # 每周日 08:00（Asia/Shanghai 时区）自动触发
+  workflow_dispatch:
+    inputs:
+      kernel_version:
+        description: "内核版本（例如 6.12.y）"
+        required: false
+        default: "6.12.y"
 
 env:
   REPO_URL: https://github.com/coolsnowwolf/lede
